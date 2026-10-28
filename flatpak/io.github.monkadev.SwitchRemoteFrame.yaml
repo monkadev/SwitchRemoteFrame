@@ -90,7 +90,7 @@ modules:
     sources:
       - type: archive
         url: https://github.com/monkadev/SwitchRemoteFrame/archive/refs/tags/v1.0.1.tar.gz
-        sha256: 0000000000000000000000000000000000000000000000000000000000000000
+        sha256: 7486e98c31e5b1385054b6191bc955aaaa9015fd6e470af310466e5ae2537038
       - type: file
         path: io.github.monkadev.SwitchRemoteFrame.desktop
       - type: file
