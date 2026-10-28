@@ -1,0 +1,70 @@
+name: Switch SD card
+
+# Switch Remote Frame: the Switch-side SD-card zip for a release, with the
+# project's own script (tools/make_release.sh, which builds the sysmodule, the
+# donor/launcher, the Tesla overlay and the manager inside the devkitA64
+# container). Run it from the Actions tab (or the API) with the release
+# version; the zip is the run's artifact, and the release job puts it on the
+# GitHub release for the version (tag v<version>) next to the viewers.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version in the file name, e.g. 1.0.0'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04        # docker is on the runner; the script uses it
+    steps:
+      - uses: actions/checkout@v5
+      - name: Research refs (ref/)
+        run: |
+          set -e
+          # the overlay and manager compile against libtesla; the sysmodule is
+          # built inside an Atmosphere tree - 1.12.0, the tree the sysmodule's
+          # build script records for firmware 23 (tier4/applet-mitm/build.sh)
+          git clone --depth 1 https://github.com/WerWolv/libtesla ref/libtesla
+          git clone --depth 1 --branch 1.12.0 https://github.com/Atmosphere-NX/Atmosphere ref/Atmosphere-1.12.0
+      - name: Build the SD-card zip
+        env:
+          AMS_TREE: ref/Atmosphere-1.12.0
+          SFT_SKIP_VIEWERS: '1'    # the viewers have their own workflow
+        run: bash tools/make_release.sh "${{ inputs.version }}"
+      - name: What the zip carries
+        run: unzip -l dist/switch-remote-frame-*-switch.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: switch-sd
+          path: dist/switch-remote-frame-*-switch.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write        # to put the zip on the release
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: switch-sd
+          path: rel
+      - name: Put the zip on the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          VERSION="${{ inputs.version }}"; TAG="v${VERSION}"
+          REPO="${GITHUB_REPOSITORY}"          # no checkout here, so gh needs to be told
+          ls -la rel
+          if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            echo "release $TAG already exists - uploading the Switch zip"
+            gh release upload "$TAG" -R "$REPO" --clobber rel/switch-remote-frame-*-switch.zip
+          else
+            gh release create "$TAG" -R "$REPO" \
+              --title "Switch Remote Frame $VERSION" \
+              --notes "Switch Remote Frame $VERSION - the Switch-side SD-card zip. Unpack it onto the root of the SD card." \
+              rel/switch-remote-frame-*-switch.zip
+          fi

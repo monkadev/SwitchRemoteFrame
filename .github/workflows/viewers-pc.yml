@@ -1,0 +1,155 @@
+name: PC viewers
+
+# Switch Remote Frame: the Windows, Linux and macOS viewers for a release,
+# with the project's own build scripts (tools/raw-recv/build-*.sh). Run it from
+# the Actions tab (or the API) with the release version; the zips, the Linux
+# AppImage and the other artifacts are the run's artifacts, and the release
+# job puts them on the GitHub release for the version (tag v<version>).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version in the file names, e.g. 1.0.0'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Packages
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q nasm imagemagick zip fonts-dejavu-core
+      - name: Toolchain and libraries (ref/win)
+        run: |
+          set -e
+          W=ref/win; mkdir -p ref $W/ffmpeg
+          curl -sSfL https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz | tar -xJ -C $W
+          mv $W/zig-x86_64-linux-0.16.0 $W/zig
+          curl -sSfL https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-devel-2.32.10-mingw.tar.gz | tar -xz -C $W
+          mv $W/SDL2-2.32.10 $W/sdl2
+          # 7-Zip itself: Ubuntu 22.04's p7zip cannot unpack this archive's ARM64 parts
+          curl -sSfL https://github.com/ip7z/7zip/releases/download/24.09/7z2409-linux-x64.tar.xz | tar -xJ -C $RUNNER_TEMP 7zz
+          curl -sSfL -o $RUNNER_TEMP/libusb.7z https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.7z
+          $RUNNER_TEMP/7zz x -y -o$W/libusb $RUNNER_TEMP/libusb.7z > /dev/null
+          curl -sSfL -o ref/ffmpeg-8.1.tar.xz https://ffmpeg.org/releases/ffmpeg-8.1.tar.xz
+          ls $W $W/libusb $W/libusb/MinGW64/* | head -40
+      - name: FFmpeg (minimal, static)
+        run: JOBS=4 bash tools/raw-recv/build-ffmpeg-min.sh
+      - name: Build
+        run: bash tools/raw-recv/build-windows.sh "${{ inputs.version }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: viewer-windows
+          path: dist/switch-remote-frame-*-windows-viewer.zip
+
+  linux:
+    runs-on: ubuntu-22.04   # glibc 2.35: runs on Fedora 36+, Arch, SteamOS 3, Bazzite
+    steps:
+      - uses: actions/checkout@v5
+      - name: Packages
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q build-essential nasm pkg-config python3 \
+            libusb-1.0-0-dev libudev-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxfixes-dev libxkbcommon-dev \
+            libwayland-dev wayland-protocols libdecor-0-dev libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev \
+            libdrm-dev libgbm-dev libpulse-dev libasound2-dev \
+            squashfs-tools          # the AppImage
+      - name: Sources (ref/)
+        run: |
+          set -e
+          curl -sSfL -o ref/ffmpeg-8.1.tar.xz https://ffmpeg.org/releases/ffmpeg-8.1.tar.xz
+          curl -sSfL -o ref/SDL2-2.32.10.tar.gz https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz
+          curl -sSfL -o ref/nv-codec-headers-n13.0.19.0.tar.gz https://github.com/FFmpeg/nv-codec-headers/archive/refs/tags/n13.0.19.0.tar.gz
+          curl -sSfL -o ref/libva-2.24.1.tar.gz https://github.com/intel/libva/archive/refs/tags/2.24.1.tar.gz
+      - name: Build (portable binary)
+        run: JOBS=4 bash tools/raw-recv/build-linux-portable.sh "${{ inputs.version }}"
+      - name: Build (one runnable AppImage)
+        run: bash tools/raw-recv/build-linux-appimage.sh "${{ inputs.version }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: viewer-linux
+          path: |
+            dist/switch-remote-frame-*-linux.tar.gz
+            dist/switch-remote-frame-*-linux.AppImage
+
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14         # Apple Silicon
+          - runner: macos-15-intel   # Intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Dependencies
+        run: brew install libusb pkg-config nasm cmake
+      - name: Build
+        run: bash tools/raw-recv/build-macos.sh "${{ inputs.version }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: viewer-macos-${{ matrix.runner }}
+          path: dist/switch-remote-frame-*-macos-*.zip
+
+  release:
+    needs: [windows, linux, macos]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write        # to create the release and upload the viewers
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: rel
+      - name: Put the viewers on the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          VERSION="${{ inputs.version }}"; TAG="v${VERSION}"
+          REPO="${GITHUB_REPOSITORY}"          # no checkout here, so gh needs to be told
+          mkdir -p rel/all
+          find rel -type f -name 'switch-remote-frame-*' -exec cp -n {} rel/all/ \; \
+            || { echo "no viewer artifacts were collected"; exit 1; }
+          ls -la rel/all
+          # The notes. The delimiter is quoted, so nothing in them is expanded -
+          # the backticks and the | of the table below are literal text. $VERSION
+          # is substituted afterwards with sed.
+          cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          Switch Remote Frame $VERSION - the viewers for every device.
+
+          The PC viewer takes the same input as the Android app and sends it to the
+          Switch: the **mouse** touches the Switch's screen, the **keyboard** and a
+          **gamepad** on the PC play as a Pro Controller, and the game's **rumble**
+          is felt on the PC's own controller. All of it is on by default and can be
+          turned off in Settings (mouse / keyboard / gamepad / rumble).
+
+          | File | Device |
+          | --- | --- |
+          | `-windows-viewer.zip` | Windows: unzip, run `SwitchRemoteFrame.exe` |
+          | `-macos-arm64.zip` | macOS on Apple Silicon |
+          | `-macos-x86_64.zip` | macOS on Intel |
+          | `-linux.AppImage` | Linux: one runnable file - `chmod +x` it and run it |
+          | `-linux.tar.gz` | Linux: the portable tarball, if you prefer one |
+          | `-android.apk` | Android phones, tablets and Android TV |
+
+          On a machine without FUSE the AppImage still runs:
+
+              ./switch-remote-frame-$VERSION-linux.AppImage --appimage-extract-and-run
+          NOTES
+          sed -i "s/\$VERSION/$VERSION/g" "$RUNNER_TEMP/notes.md"
+
+          if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            echo "release $TAG already exists - uploading the viewers"
+            gh release upload "$TAG" -R "$REPO" --clobber rel/all/*
+          else
+            gh release create "$TAG" -R "$REPO" \
+              --title "Switch Remote Frame $VERSION" \
+              --notes-file "$RUNNER_TEMP/notes.md" \
+              rel/all/*
+          fi

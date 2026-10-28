@@ -1,0 +1,97 @@
+app-id: io.github.monkadev.SwitchRemoteFrame
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+command: switch-remote-frame-viewer
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --filesystem=xdg-run/pipewire-0
+  - --device=dri
+  - --device=usb
+  - --filesystem=xdg-videos
+  - --share=network
+modules:
+  - name: nv-codec-headers
+    buildsystem: simple
+    build-commands:
+      - make PREFIX=/app install
+    cleanup:
+      - '*'
+    sources:
+      - type: archive
+        url: https://github.com/FFmpeg/nv-codec-headers/archive/refs/tags/n13.0.19.0.tar.gz
+        sha256: 86d15d1a7c0ac73a0eafdfc57bebfeba7da8264595bf531cf4d8db1c22940116
+  - name: ffmpeg
+    buildsystem: autotools
+    config-opts:
+      - --enable-static
+      - --disable-shared
+      - --enable-pic
+      - --disable-everything
+      - --disable-autodetect
+      - --disable-programs
+      - --disable-doc
+      - --disable-network
+      - --disable-avdevice
+      - --disable-avfilter
+      - --disable-swscale
+      - --disable-swresample
+      - --enable-decoder=h264
+      - --enable-parser=h264
+      - --enable-encoder=aac
+      - --enable-muxer=mp4
+      - --enable-protocol=file
+      - --enable-vaapi
+      - --enable-ffnvcodec
+      - --enable-cuda
+      - --enable-nvdec
+      - --enable-hwaccel=h264_vaapi,h264_nvdec
+    cleanup:
+      - /include
+      - /lib/pkgconfig
+      - /lib/cmake
+      - /share/aclocal
+      - /lib/*.la
+    sources:
+      - type: archive
+        url: https://ffmpeg.org/releases/ffmpeg-8.1.tar.xz
+        sha256: b072aed6871998cce1b362870433105ca29e33632be5b6347f3206898e0756a
+  - name: sdl2
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --disable-esd
+      - --disable-arts
+      - --disable-nas
+      - --disable-sndio
+      - --disable-jack
+      - --disable-video-vulkan
+    cleanup:
+      - /bin
+      - /include
+      - /lib/pkgconfig
+      - /lib/cmake
+      - /share/aclocal
+    sources:
+      - type: archive
+        url: https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz
+        sha256: 5f5993c530f084535c65a6879e26ad441169b3e25d789d83287040a9ca516565
+  - name: switch-remote-frame
+    buildsystem: simple
+    build-commands:
+      - gcc -O2 -Wall -Wextra -DSFT_H264 -DSFT_MP4 -DSFT_VERSION='"1.0.0"' -I/app/include $(pkg-config --cflags sdl2 libusb-1.0) -o switch-remote-frame-viewer tools/raw-recv/raw-view.c /app/lib/libavformat.a /app/lib/libavcodec.a /app/lib/libavutil.a -lva -lva-drm $(pkg-config --libs sdl2 libusb-1.0) -ludev -lpthread -lm -ldl
+      - install -D switch-remote-frame-viewer /app/bin/switch-remote-frame-viewer
+      - install -D tools/raw-recv/switch-remote-frame.svg /app/share/icons/hicolor/scalable/apps/io.github.monkadev.SwitchRemoteFrame.svg
+      - install -D io.github.monkadev.SwitchRemoteFrame.desktop /app/share/applications/io.github.monkadev.SwitchRemoteFrame.desktop
+      - install -D io.github.monkadev.SwitchRemoteFrame.metainfo.xml /app/share/metainfo/io.github.monkadev.SwitchRemoteFrame.metainfo.xml
+    sources:
+      - type: archive
+        url: https://github.com/monkadev/switchremoteframe/archive/refs/tags/v1.0.0.tar.gz
+        sha256: 803211caf44d80d4cd91e7bbf69615a9bf06eb6499893fc25fb778e05b222a4c
+      - type: file
+        path: io.github.monkadev.SwitchRemoteFrame.desktop
+      - type: file
+        path: io.github.monkadev.SwitchRemoteFrame.metainfo.xml

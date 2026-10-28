@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Aurora design system v2 (docs/UI-REDESIGN.md), matching Ui.java / ui.hpp / ui.h -->
+    <color name="icon_background">#0B0D11</color>
+    <color name="background">#0B0D11</color>
+    <color name="accent">#4D8DFF</color>
+</resources>

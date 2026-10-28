@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Install the viewer as a desktop app: a double-clickable "Switch Remote Frame"
+# on the desktop and in the applications menu. It opens a window at once,
+# waits for the Switch, reconnects when it comes back, and closes only when
+# you close it (raw-view --app). F11 or a double-click: fullscreen.
+#
+#   bash tools/raw-recv/install-launcher.sh            # install / update
+#   bash tools/raw-recv/install-launcher.sh --remove   # uninstall
+#
+# Needs the viewer's build dependencies and the udev rule (README, quick start).
+set -e
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN="$HOME/.local/bin/switch-remote-frame-viewer"
+ICON="$HOME/.local/share/icons/hicolor/scalable/apps/switch-remote-frame.svg"
+APPS="$HOME/.local/share/applications/switch-remote-frame.desktop"
+DESK="$(xdg-user-dir DESKTOP 2>/dev/null || echo "$HOME/Desktop")/switch-remote-frame.desktop"
+
+if [ "$1" = "--remove" ]; then
+    rm -f "$BIN" "$ICON" "$APPS" "$DESK"
+    update-desktop-database "$(dirname "$APPS")" 2>/dev/null || true
+    gtk-update-icon-cache -q "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+    command -v kbuildsycoca6 >/dev/null && kbuildsycoca6 --noincremental 2>/dev/null || true
+    echo "removed"
+    exit 0
+fi
+
+make -C "$HERE" raw-view >/dev/null
+grep -q "raw-view built WITH H.264" < <(make -C "$HERE" -B raw-view 2>&1) || { echo "raw-view has no H.264 decoder - install libavcodec-dev (README)"; exit 1; }
+[ -f /etc/udev/rules.d/99-switch-remote-frame.rules ] || echo "note: the udev rule is not installed - the viewer may not be able to open the Switch (README, quick start step 2)"
+
+mkdir -p "$(dirname "$BIN")" "$(dirname "$ICON")" "$(dirname "$APPS")" "$(dirname "$DESK")"
+install -m 755 "$HERE/raw-view" "$BIN"
+install -m 644 "$HERE/switch-remote-frame.svg" "$ICON"
+cat > "$APPS" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Switch Remote Frame
+Comment=Watch and play your Switch on this PC over USB
+Exec=$BIN --app
+PrefersNonDefaultGPU=true
+Icon=$ICON
+Terminal=false
+Categories=Game;
+StartupNotify=true
+X-KDE-StartupNotify=true
+Keywords=Switch;Nintendo;stream;viewer;game;
+EOF
+chmod 755 "$APPS"
+install -m 755 "$APPS" "$DESK"
+# GNOME's desktop only launches files marked trusted ("Allow Launching")
+gio set "$DESK" metadata::trusted true 2>/dev/null || true
+update-desktop-database "$(dirname "$APPS")" 2>/dev/null || true
+gtk-update-icon-cache -q "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+command -v kbuildsycoca6 >/dev/null && kbuildsycoca6 --noincremental 2>/dev/null || true
+echo "installed: $BIN"
+echo "launcher:  $DESK (and in the applications menu)"
+echo "log:       ${XDG_STATE_HOME:-$HOME/.local/state}/switch-remote-frame/viewer.log"

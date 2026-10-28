@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.monkadev.SwitchRemoteFrame</id>
+
+  <metadata_license>FSFAP</metadata_license>
+
+  <project_license>GPL-2.0-only</project_license>
+
+  <name>Switch Remote Frame</name>
+  <summary>Watch and record your Switch, streamed over USB or the network</summary>
+
+  <description>
+    <p>
+      The PC viewer for Switch Remote Frame: watch, play and record the game running on your Nintendo Switch, streamed with sound over a USB-C cable or the network at the game's own resolution and 60 fps.
+    </p>
+    <p>
+      It needs a Switch running Atmosphère with the Switch Remote Frame sysmodule installed. The viewer decodes on the GPU (VAAPI or NVDEC), records MP4 and takes native-resolution screenshots, with optional FSR 1 and NIS upscaling.
+    </p>
+    <p>
+      USB needs the udev rule from the project page installed once on the host.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.monkadev.SwitchRemoteFrame.desktop</launchable>
+
+  <url type="homepage">https://github.com/monkadev/switchremoteframe</url>
+  <url type="bugtracker">https://github.com/monkadev/switchremoteframe/issues</url>
+  <url type="donation">https://ko-fi.com/monkadev</url>
+
+  <developer id="io.github.monkadev">
+    <name>monkadev</name>
+  </developer>
+
+  <provides>
+    <binary>switch-remote-frame-viewer</binary>
+  </provides>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>A Switch game streamed to a PC over USB</caption>
+      <image>https://raw.githubusercontent.com/monkadev/switchremoteframe/main/docs/hero-switch-to-pc.jpg</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.0.0" date="2026-10-28">
+      <description>
+        <ul>
+          <li>First release of Switch Remote Frame, a fork of Switch Frame Tap.</li>
+          <li>Touch control, gamepad and rumble support, and an on-screen virtual gamepad with a layout editor.</li>
+          <li>Redesigned dark UI across the Switch manager, Tesla overlay, Android/TV app and PC viewer.</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>
