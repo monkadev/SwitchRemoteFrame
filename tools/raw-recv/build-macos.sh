@@ -129,7 +129,7 @@ first time, right-click it and choose Open (or run
 in Terminal). No driver is needed for USB on macOS.
 
 FFmpeg (H.264, AAC, MP4), SDL 2 and libusb are built in.
-https://github.com/monkadev/switchremoteframe
+https://github.com/monkadev/SwitchRemoteFrame
 TXT
 # the zip is the app and its paperwork only: the object file and the loose
 # binary are build intermediates (the .app carries its own copy of the viewer)

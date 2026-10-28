@@ -42,7 +42,7 @@
 
 namespace {
 
-    constexpr const char *AppVersion  = "1.0.0";   /* the release tags (v1.0.0, ...) compare with this */
+    constexpr const char *AppVersion  = "1.0.1";   /* the release tags (v1.0.0, ...) compare with this */
     constexpr u64 ModuleTid           = 0x0100000000000F7Aull;
     constexpr const char *ModuleDir   = "sdmc:/atmosphere/contents/0100000000000F7A";
     constexpr const char *ModuleNsp   = "sdmc:/atmosphere/contents/0100000000000F7A/exefs.nsp";
@@ -1056,8 +1056,8 @@ namespace {
                 Page p{ "About", {} };
                 p.rows.push_back(Info("Version", [] { return std::string(AppVersion); }, nullptr,
                     "Switch Remote Frame - native 1080p60 game streaming to a PC, over USB or the network."));
-                p.rows.push_back(Info("Source code", [] { return std::string("github.com/monkadev/switchremoteframe"); }, nullptr,
-                    "Free and open source (GPL-2.0). Bug reports and source code: github.com/monkadev/switchremoteframe."));
+                p.rows.push_back(Info("Source code", [] { return std::string("github.com/monkadev/SwitchRemoteFrame"); }, nullptr,
+                    "Free and open source (GPL-2.0). Bug reports and source code: github.com/monkadev/SwitchRemoteFrame."));
                 p.rows.push_back(Info("If something goes wrong", [] { return std::string("Hold Volume Up at boot"); }, nullptr,
                     "Holding Volume Up while Atmosphere boots skips all sysmodules. Or turn off \"Start with the console\" on the "
                     "Home page, or delete atmosphere/contents/0100000000000F7A and 0100000000000F7B on a PC."));

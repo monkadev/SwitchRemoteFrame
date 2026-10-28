@@ -204,7 +204,7 @@ def main(out_path):
 
     # 5. end card
     e = card([("Free and open source", mid)],
-             [("github.com/monkadev/switchremoteframe", tiny), ("", tiny),
+             [("github.com/monkadev/SwitchRemoteFrame", tiny), ("", tiny),
               ("Windows, Linux and macOS", small), ("On the Homebrew App Store", small)])
     d = ImageDraw.Draw(e)
     d.rectangle((W // 2 - 90, H // 2 - 200, W // 2 + 90, H // 2 - 192), fill=ACCENT)

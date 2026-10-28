@@ -1,7 +1,7 @@
 # Run C of M77: install, run once on hardware, report back
 
 You're helping me test `applet-mitm`, a homebrew sysmodule from this repo
-(github.com/monkadev/switchremoteframe), on my own Switch. You have the SD
+(github.com/monkadev/SwitchRemoteFrame), on my own Switch. You have the SD
 card (through a card reader) and the repo. I do the physical steps on the
 console: booting, launching the game, powering off. Ask me when it's time for
 each one. The job is one hardware run, "Run C" of the M77 build: install it,

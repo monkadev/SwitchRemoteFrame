@@ -626,6 +626,9 @@ static int g_conn_requested = 0;
  * findable - while the bar may go to nothing at all. */
 static int g_conn_cli = -1;                /* --no-connect; -1 leaves the saved choice alone */
 static int g_set_op = 100;                 /* percent, 0..100 */
+/* v1.0.1: whether the in-stream Settings gear is drawn at all. Off hides the
+ * gear (Esc and the home screen's Settings card still open the drawer). */
+static int g_set_button = 1;
 static char g_last_ip[64] = "";
 static char g_net_status[128] = "";    /* what the finder is doing, for the menu */
 static char g_ip_edit[32] = "";        /* I: the address being typed */
@@ -696,6 +699,7 @@ static void prefs_load(void)
         int hm;
         if (sscanf(line, "auto=%d", &hm) == 1) g_conn_requested = hm != 0;
         if (sscanf(line, "set_op=%d", &hm) == 1 && hm >= 0 && hm <= 100) g_set_op = hm;
+        if (sscanf(line, "set_button=%d", &hm) == 1) g_set_button = hm != 0;   /* v1.0.1 */
         if (sscanf(line, "stats_overlay=%d", &hm) == 1 && hm >= 0 && hm < HUD_MODES) g_hud = hm;
         if (sscanf(line, "vsync=%d", &hm) == 1) g_vsync = hm != 0;
         if (sscanf(line, "upscaler=%127s", v) == 1) up_set_by_key(v);
@@ -2748,14 +2752,21 @@ static void test_editor_drive(SDL_Window *win, SDL_Renderer *ren, SDL_Texture *t
  * even when there is no video texture and no console connection. */
 static int test_home_click_settings_item(SDL_Window *win, SDL_Renderer *ren, SDL_Texture *tex, int want)
 {
-    /* The gamepad rows are near the bottom of Settings. Scroll to the end, draw
-     * once to rebuild real hit geometry, then click exactly as a user does. */
-    ui_overlay(ren, 1280, 720);  /* compute content height before clamping scroll */
-    g_ui_scroll = 100000.f;
+    /* The gamepad rows sit low in Settings. Walk the wheel one notch at a time
+     * until the row's real hit is on screen (the same way a user reaches it) -
+     * jumping the scroll to the absolute bottom can leave the row above the
+     * viewport now that the ABOUT block extends the column past it. */
     ui_overlay(ren, 1280, 720);
     int found = -1;
-    for (int i = 0; i < g_ui_nhits; i++) if (g_ui_hits[i].id == want &&
-        g_ui_hits[i].r.w > 0 && g_ui_hits[i].r.h > 0) { found = i; break; }
+    for (int k = 0; k < 30 && found < 0; k++) {
+        ui_overlay(ren, 1280, 720);
+        for (int i = 0; i < g_ui_nhits; i++) if (g_ui_hits[i].id == want &&
+            g_ui_hits[i].r.w > 0 && g_ui_hits[i].r.h > 0) { found = i; break; }
+        if (found >= 0) break;
+        SDL_Event ev; memset(&ev, 0, sizeof(ev));
+        ev.type = SDL_MOUSEWHEEL; ev.wheel.y = -1;
+        app_event(win, ren, tex, &ev);
+    }
     if (found < 0) return 0;
     const SDL_FRect r = g_ui_hits[found].r;
     int wx = 0, wy = 0;
@@ -3134,7 +3145,7 @@ static void test_chrome_drive(SDL_Window *win, SDL_Renderer *ren, SDL_Texture *t
     static int step = 0;
     static Uint64 at = 0;
     static float gx = 0, gy = 0;
-    if (!g_test_chrome || step > 2) return;
+    if (!g_test_chrome || step > 4) return;
     if (g_menu) return;                       /* the picture, or nothing to say */
     if (!g_freq) g_freq = SDL_GetPerformanceFrequency();
     const Uint64 now = SDL_GetPerformanceCounter();
@@ -3205,6 +3216,27 @@ static void test_chrome_drive(SDL_Window *win, SDL_Renderer *ren, SDL_Texture *t
         app_event(win, ren, tex, &ev);
         fprintf(stderr, "test-chrome: moved -> idle alpha %.2f, clicked it -> Settings %s\n",
                 back, g_ui_open ? "opened" : "did not open");
+    } else if (step == 3) {
+        /* v1.0.1: the Settings button toggle hides the gear altogether - no
+         * layout slot, no hit. Esc and the home card still open Settings. */
+        g_set_button = 0; prefs_save();
+        float xs[4], d = 42.f, y = 10.f; int ids[4];
+        const int n = ui_chrome_layout(ow, xs, ids, &d, &y);
+        int in_layout = 0; for (int i = 0; i < n; i++) if (ids[i] == H_SETTINGS) in_layout = 1;
+        int id2 = 0;
+        const int hit = ui_chrome_at(ren, gx, gy, &id2);
+        fprintf(stderr, "test-chrome: toggle off -> gear in layout %s, hit at its place %s\n",
+                in_layout ? "yes (FAIL)" : "no", (hit && id2 == H_SETTINGS) ? "yes (FAIL)" : "no");
+    } else if (step == 4) {
+        /* switch it back: the gear returns and viewer.ini remembers it */
+        g_set_button = 1; prefs_save();
+        float xs[4], d = 42.f, y = 10.f; int ids[4];
+        const int n = ui_chrome_layout(ow, xs, ids, &d, &y);
+        int in_layout = 0; for (int i = 0; i < n; i++) if (ids[i] == H_SETTINGS) in_layout = 1;
+        int id2 = 0;
+        const int hit = ui_chrome_at(ren, gx, gy, &id2);
+        fprintf(stderr, "test-chrome: toggle on -> gear in layout %s, hit %s\n",
+                in_layout ? "yes" : "no (FAIL)", (hit && id2 == H_SETTINGS) ? "H_SETTINGS" : "missing (FAIL)");
     }
     step++;
 }

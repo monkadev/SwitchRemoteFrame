@@ -302,7 +302,7 @@ namespace extras {
      * use (this app, the running sysmodule) are replaced on the card; the
      * console runs the new ones after a restart. */
 
-    constexpr const char *SelfRepo = "monkadev/switchremoteframe";   /* Switch Remote Frame's own releases */
+    constexpr const char *SelfRepo = "monkadev/SwitchRemoteFrame";   /* Switch Remote Frame's own releases */
 
     inline bool SelfAsset(const char *n) { return EndsWith(n, "-switch.zip"); }
 

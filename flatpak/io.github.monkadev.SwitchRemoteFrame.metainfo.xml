@@ -23,8 +23,8 @@
 
   <launchable type="desktop-id">io.github.monkadev.SwitchRemoteFrame.desktop</launchable>
 
-  <url type="homepage">https://github.com/monkadev/switchremoteframe</url>
-  <url type="bugtracker">https://github.com/monkadev/switchremoteframe/issues</url>
+  <url type="homepage">https://github.com/monkadev/SwitchRemoteFrame</url>
+  <url type="bugtracker">https://github.com/monkadev/SwitchRemoteFrame/issues</url>
   <url type="donation">https://ko-fi.com/monkadev</url>
 
   <developer id="io.github.monkadev">
@@ -38,13 +38,22 @@
   <screenshots>
     <screenshot type="default">
       <caption>A Switch game streamed to a PC over USB</caption>
-      <image>https://raw.githubusercontent.com/monkadev/switchremoteframe/main/docs/hero-switch-to-pc.jpg</image>
+      <image>https://raw.githubusercontent.com/monkadev/SwitchRemoteFrame/main/docs/hero-switch-to-pc.jpg</image>
     </screenshot>
   </screenshots>
 
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.0.1" date="2026-10-28">
+      <description>
+        <ul>
+          <li>The in-stream Settings button can be shown or hidden, with an opacity slider, and fades away two seconds after the last touch or mouse movement on Android and PC.</li>
+          <li>An About section at the bottom of the PC settings links to the GitHub project.</li>
+          <li>The support action is now labelled "Support this project".</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-10-28">
       <description>
         <ul>

@@ -39,7 +39,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 
 APP_TITLE			:=		Switch Remote Frame
-APP_VERSION 	:= 		1.0.0
+APP_VERSION 	:= 		1.0.1
 
 TARGET		:=	switch-remote-frame
 BUILD		:=	build

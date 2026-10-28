@@ -37,7 +37,7 @@
 #define SFT_VERSION "dev"
 #endif
 
-#define UPD_REPO "monkadev/switchremoteframe"
+#define UPD_REPO "monkadev/SwitchRemoteFrame"
 
 enum { UPD_IDLE, UPD_CHECKING, UPD_LATEST, UPD_FOUND, UPD_GETTING, UPD_READY, UPD_ERROR, UPD_UNSUPPORTED };
 

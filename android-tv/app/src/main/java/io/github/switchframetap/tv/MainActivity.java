@@ -63,6 +63,14 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
     private Ui.Toggle muteToggle, stableToggle, statsToggle;
     private TextView fpsView;                      // 0.7.16: "framerate only" - a small white number
     private boolean fpsOnly;
+    // v1.0.1: the floating Settings gear over the game - see-through, hidden
+    // 2 s after the last touch or mouse movement, and switchable altogether
+    private Button overlayGear;
+    private boolean overlayButton;
+    private int overlayOpacity;                    // 0..100 percent
+    private final Runnable overlayHide = new Runnable() {
+        @Override public void run() { hideOverlayGear(); }
+    };
     private boolean smoothVideo;   // 0.7.16: FramePacer
     private Updater updater;                       // v0.7.14: updates from GitHub
     private Button drawerDisconnect;   // touch-6: Settings' top bar
@@ -138,6 +146,8 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         stats = prefs.getBoolean("stats", false);
         touchControl = prefs.getBoolean("touch", true);
         fpsOnly = prefs.getBoolean("fps_only", false);
+        overlayButton = prefs.getBoolean("overlay_button", true);
+        overlayOpacity = Math.max(0, Math.min(100, prefs.getInt("overlay_opacity", 100)));
         smoothVideo = prefs.getBoolean("smooth_video", false);   // touch-6: off by default
         gamepadControl = prefs.getBoolean("gamepad", true);
         padDeadzone = Math.max(0, Math.min(DEADZONES.length - 1, prefs.getInt("pad_deadzone", 1)));
@@ -198,6 +208,24 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         FrameLayout.LayoutParams fl = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.START);
         fl.setMargins(dp(8), dp(6), 0, 0);
         root.addView(fpsView, fl);
+        // v1.0.1: the floating Settings gear over the game - the PC viewer's
+        // in-stream button, restored on Android. Non-focusable so it never
+        // joins the D-pad chain while a game streams; Back still opens Settings.
+        overlayGear = new Button(this);
+        overlayGear.setContentDescription("Settings");
+        overlayGear.setStateListAnimator(null);
+        overlayGear.setFocusable(false);
+        overlayGear.setFocusableInTouchMode(false);
+        android.graphics.drawable.LayerDrawable overlayGearBg = new android.graphics.drawable.LayerDrawable(
+                new android.graphics.drawable.Drawable[]{ Ui.states(Ui.SURF2, Ui.SURF3, 20), new Ui.Gear(Ui.INK) });
+        overlayGearBg.setLayerInset(1, dp(10), dp(10), dp(10), dp(10));
+        overlayGear.setBackground(overlayGearBg);
+        overlayGear.setAlpha(overlayOpacity / 100f);
+        overlayGear.setVisibility(View.GONE);
+        overlayGear.setOnClickListener(v -> openDrawer());
+        FrameLayout.LayoutParams ogl = new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP | Gravity.END);
+        ogl.setMargins(0, dp(18), dp(24), 0);
+        root.addView(overlayGear, ogl);
         // Settings over the game: Back (there is no button on the picture - with
         // touch control every tap there is the Switch's)
         updater = new Updater(this, this::updateUpdater);
@@ -293,13 +321,13 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         // v1.1.3: Donate lives under the status and info texts on the left of
         // the panel (this hero column), left aligned - no longer under the
         // connection controls, so both columns keep one clear job.
-        Button homeDonate = Ui.pill(this, "\u2665  Donate", true, v -> {
+        Button homeDonate = Ui.pill(this, "\u2665  Support this project", true, v -> {
             try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://ko-fi.com/monkadev"))); }
             catch (android.content.ActivityNotFoundException ignored) { }
         });
         homeDonate.setBackground(Ui.states(Ui.HEART, 0xFFEC6266, 24));
         homeDonate.setTextColor(Ui.INK);
-        homeDonate.setContentDescription("Donate on Ko-fi");
+        homeDonate.setContentDescription("Support this project");
         Ui.focusLift(homeDonate);
         LinearLayout.LayoutParams dnl = new LinearLayout.LayoutParams(-2, dp(44));
         dnl.topMargin = dp(18); dnl.gravity = Gravity.START;
@@ -500,6 +528,55 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
             fpsOnly = value; prefs.edit().putBoolean("fps_only", value).apply();
             updateFps();
         });
+        // v1.0.1: the floating Settings gear over the game - show/hide and how
+        // see-through it is. The gear fades away 2 s after the last touch or
+        // mouse movement; 0% keeps it completely out of the way.
+        final View[] opacityViews = new View[2];
+        toggleRow(body, "Settings button", "Show the floating gear over the game. It fades away 2 seconds after the last touch or mouse movement, and a tap on it opens Settings", overlayButton, value -> {
+            overlayButton = value; prefs.edit().putBoolean("overlay_button", value).apply();
+            for (View v : opacityViews) if (v != null) { v.setEnabled(value); v.setAlpha(value ? 1f : 0.4f); }
+            updateOverlayGear();
+            if (value) pokeOverlay();
+        });
+        LinearLayout opRow = new LinearLayout(this);
+        opRow.setOrientation(LinearLayout.VERTICAL);
+        opRow.setPadding(dp(12), dp(10), dp(12), dp(10));
+        opRow.setFocusable(true); opRow.setClickable(true); opRow.setBackground(Ui.rowBackground());
+        LinearLayout opHead = new LinearLayout(this); opHead.setGravity(Gravity.CENTER_VERTICAL);
+        opHead.addView(Ui.text(this, "Settings button opacity", 16, Ui.INK, false),
+                new LinearLayout.LayoutParams(0, -2, 1));
+        final TextView opPercent = Ui.text(this, overlayOpacity + "%", 15, Ui.DIM, true);
+        opHead.addView(opPercent);
+        opRow.addView(opHead);
+        TextView opSub = Ui.text(this, "100% is solid; 0% hides the gear completely", 13, Ui.DIM, false);
+        opSub.setPadding(0, dp(5), 0, 0);
+        opRow.addView(opSub);
+        final android.widget.SeekBar opBar = new android.widget.SeekBar(this);
+        opBar.setMax(100); opBar.setProgress(overlayOpacity);
+        opBar.setProgressTintList(android.content.res.ColorStateList.valueOf(Ui.ACC));
+        opBar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Ui.SURF3));
+        opBar.setThumbTintList(android.content.res.ColorStateList.valueOf(Ui.INK));
+        opBar.setPadding(0, dp(8), 0, 0);
+        opBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(android.widget.SeekBar bar, int progress, boolean fromUser) {
+                overlayOpacity = progress;
+                opPercent.setText(progress + "%");
+                prefs.edit().putInt("overlay_opacity", progress).apply();
+                overlayGear.setAlpha(progress / 100f);
+                if (progress == 0) updateOverlayGear();
+                else if (overlayButton && overlayGear.getVisibility() == View.VISIBLE)
+                    handler.removeCallbacks(overlayHide);
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar bar) { }
+            @Override public void onStopTrackingTouch(android.widget.SeekBar bar) {
+                if (overlayButton && overlayOpacity > 0) pokeOverlay();
+                else updateOverlayGear();
+            }
+        });
+        opRow.addView(opBar);
+        body.addView(opRow);
+        opacityViews[0] = opRow; opacityViews[1] = opBar;
+        for (View v : opacityViews) { v.setEnabled(overlayButton); v.setAlpha(overlayButton ? 1f : 0.4f); }
 
         section(body, "CONTROL");
         toggleRow(body, "Touch control", "Touching the picture touches the Switch's screen (needs Switch Remote Frame on the Switch). Off: a tap opens Settings", touchControl, value -> {
@@ -558,7 +635,7 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         catch (PackageManager.NameNotFoundException ignored) { }
         TextView about = Ui.text(this, "Switch Remote Frame " + version + "\n"
                 + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE + "\n"
-                + "GPL-2.0 · github.com/monkadev/switchremoteframe\n\n"
+                + "GPL-2.0 · github.com/monkadev/SwitchRemoteFrame\n\n"
                 + "Touching the picture touches the Switch's screen, and a gamepad connected here plays as a Pro Controller. Quality and resolution are chosen on the console.", 13, Ui.DIM, false);
         about.setLineSpacing(dp(4), 1); about.setPadding(dp(12), dp(4), dp(12), dp(8));
         about.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
@@ -1018,6 +1095,7 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         ipDrawer.setText(prefs.getString("ip", ""));
         liftFingers();
         scrim.setVisibility(View.VISIBLE); drawer.setVisibility(View.VISIBLE);
+        updateOverlayGear();
         updatePadStatus();
         (usbMode ? drawerUsb : drawerNet).requestFocus();
         updateVirtualPad();
@@ -1188,7 +1266,51 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
         updateVirtualPad();
         padChanged();
         updateFps();
+        updateOverlayGear();
         if (!value && !drawerOpen()) action.requestFocus();
+    }
+
+    /* ---- v1.0.1: the floating Settings gear over the game ------------------ */
+    /** Any touch, mouse movement or key press means the user is there. */
+    private void pokeOverlay() {
+        showOverlayGear();
+    }
+    private boolean overlayBlocked() {
+        return engine == null || !showingVideo || drawerOpen() || padPanelOpen()
+                || (vpadEditor != null && vpadEditor.open());
+    }
+    private void showOverlayGear() {
+        if (!overlayButton || overlayOpacity <= 0 || overlayBlocked()) return;
+        handler.removeCallbacks(overlayHide);
+        overlayGear.animate().cancel();
+        overlayGear.setAlpha(overlayOpacity / 100f);
+        overlayGear.setVisibility(View.VISIBLE);
+        handler.postDelayed(overlayHide, 2000);
+    }
+    private void hideOverlayGear() {
+        if (overlayGear.getVisibility() != View.VISIBLE) return;
+        overlayGear.animate().cancel();
+        overlayGear.animate().alpha(0f).setDuration(200).withEndAction(() -> {
+            overlayGear.setVisibility(View.GONE);
+            overlayGear.setAlpha(overlayOpacity / 100f);
+        }).start();
+    }
+    /** Drop the gear at once when its context goes away (drawer, pad page, no video). */
+    private void updateOverlayGear() {
+        if (!overlayButton || overlayOpacity <= 0 || overlayBlocked()) {
+            handler.removeCallbacks(overlayHide);
+            overlayGear.animate().cancel();
+            overlayGear.setVisibility(View.GONE);
+            overlayGear.setAlpha(overlayOpacity / 100f);
+        }
+    }
+    @Override public boolean dispatchTouchEvent(MotionEvent ev) {
+        pokeOverlay();
+        return super.dispatchTouchEvent(ev);
+    }
+    @Override public boolean onGenericMotionEvent(MotionEvent event) {
+        if (event.isFromSource(android.view.InputDevice.SOURCE_MOUSE)) pokeOverlay();
+        return super.onGenericMotionEvent(event);
     }
 
     /* ---- remote touch (0.7.16) ---------------------------------------------- */
@@ -1267,6 +1389,7 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
             }
             gamepadNear = padInput != null && padInput.anyConnected();
             updateVirtualPad();
+            updateOverlayGear();
             handler.postDelayed(this, 250);
         }
     };
@@ -1293,6 +1416,7 @@ public final class MainActivity extends Activity implements SurfaceHolder.Callba
      *  (or the remap's while it listens); otherwise Android's, so the gamepad
      *  moves around Settings (A selects, B goes back). */
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
+        if (e.getAction() == KeyEvent.ACTION_DOWN) pokeOverlay();   // v1.0.1: a key also wakes the gear
         if (padInput != null && PadInput.isGamepad(e.getDevice())) {
             boolean capturing = padInput.capturing();
             boolean padKey = padInput.key(e, padMapping);

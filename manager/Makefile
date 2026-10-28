@@ -46,7 +46,7 @@ ROMFS		:=
 
 APP_TITLE   := Switch Remote Frame
 APP_AUTHOR  := monkadev
-APP_VERSION := 1.0.0
+APP_VERSION := 1.0.1
 ICON        := icon.jpg
 
 #---------------------------------------------------------------------------------

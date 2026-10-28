@@ -43,7 +43,7 @@ BEGIN
       VALUE "FileVersion", "$VER"
       VALUE "ProductName", "Switch Remote Frame"
       VALUE "ProductVersion", "$VER"
-      VALUE "LegalCopyright", "GPL-2.0 - github.com/monkadev/switchremoteframe"
+      VALUE "LegalCopyright", "GPL-2.0 - github.com/monkadev/SwitchRemoteFrame"
       VALUE "OriginalFilename", "SwitchRemoteFrame.exe"
     END
   END
@@ -109,7 +109,7 @@ program's full source, with the build scripts to relink it against another
 FFmpeg, is at the address above (GPL-2.0)."
 fi
 cat > "$PKG/licenses/NOTICE.txt" <<TXT
-Switch Remote Frame $VER - Windows viewer. GPL-2.0, https://github.com/monkadev/switchremoteframe
+Switch Remote Frame $VER - Windows viewer. GPL-2.0, https://github.com/monkadev/SwitchRemoteFrame
 
 It ships these libraries, unmodified, as DLLs:
   SDL2.dll                2.32.10   zlib license   https://github.com/libsdl-org/SDL
@@ -177,7 +177,7 @@ If the title bar says the Switch "has no USB driver", do the setup above.
 
 Keep the DLLs next to SwitchRemoteFrame.exe.
 
-More: https://github.com/monkadev/switchremoteframe
+More: https://github.com/monkadev/SwitchRemoteFrame
 TXT
 (cd "$B" && rm -f "$OUT/switch-remote-frame-$VER-windows-viewer.zip" && zip -qr "$OUT/switch-remote-frame-$VER-windows-viewer.zip" "switch-remote-frame-$VER-windows-viewer")
 echo "== $OUT/switch-remote-frame-$VER-windows-viewer.zip"

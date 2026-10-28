@@ -43,8 +43,8 @@ Everything Switch Frame Tap already does, plus:
 
 ---
 
-[![Latest release](https://img.shields.io/github/v/release/monkadev/switchremoteframe)](https://github.com/monkadev/switchremoteframe/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/monkadev/switchremoteframe/total)](https://github.com/monkadev/switchremoteframe/releases)
+[![Latest release](https://img.shields.io/github/v/release/monkadev/SwitchRemoteFrame)](https://github.com/monkadev/SwitchRemoteFrame/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/monkadev/SwitchRemoteFrame/total)](https://github.com/monkadev/SwitchRemoteFrame/releases)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20me-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/monkadev)
 
 **Stream your Nintendo Switch games to your PC, with sound, at up to 1080p
@@ -96,7 +96,7 @@ the viewer on your PC, start a game.
 ## Quick start
 
 1. Download the `-switch.zip` from the
-   **[latest release](https://github.com/monkadev/switchremoteframe/releases/latest)**,
+   **[latest release](https://github.com/monkadev/SwitchRemoteFrame/releases/latest)**,
    unzip it onto the root of the SD card and reboot.
 2. Download the viewer for your PC from the same release:
    - **Windows:** unzip it and install the USB driver once with

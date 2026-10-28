@@ -31,7 +31,7 @@ import org.json.JSONObject;
  *  asks to allow installs from this app); the release key signs every APK,
  *  so it installs over this one. Switch Remote Frame: its own releases and key. */
 final class Updater {
-    static final String REPO = "monkadev/switchremoteframe";   // Switch Remote Frame's own releases
+    static final String REPO = "monkadev/SwitchRemoteFrame";   // Switch Remote Frame's own releases
     private static final String ACTION = "io.github.monkadev.switchremoteframe.INSTALL_RESULT";
 
     enum State { IDLE, CHECKING, LATEST, FOUND, GETTING, INSTALLING, FAILED }

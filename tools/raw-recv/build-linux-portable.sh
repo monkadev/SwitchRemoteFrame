@@ -195,7 +195,7 @@ devices and network status.
 One binary: FFmpeg (H.264, AAC, MP4), SDL 2 and libusb are built in. It
 uses your system's glibc (2.35 or newer), libudev, and its X11 or Wayland
 and PulseAudio/PipeWire for the window and the sound.
-https://github.com/monkadev/switchremoteframe
+https://github.com/monkadev/SwitchRemoteFrame
 TXT
 tar -C "$OUT" -czf "$REPO/dist/switch-remote-frame-$VER-linux.tar.gz" "switch-remote-frame-$VER-linux"
 echo "== $REPO/dist/switch-remote-frame-$VER-linux.tar.gz"

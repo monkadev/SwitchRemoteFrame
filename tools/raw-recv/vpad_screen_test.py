@@ -28,6 +28,7 @@ tools/sft_stream_test.py does, and then:
 """
 import os
 import re
+import shutil
 import socket
 import struct
 import subprocess
@@ -148,10 +149,12 @@ def sftt_frames(data):
     return out
 
 
-def run(args, seconds, console):
+def run(args, seconds, console, extra_env=None):
     env = dict(os.environ)
     env["SDL_VIDEODRIVER"] = "dummy"
     env["SDL_RENDER_DRIVER"] = "software"
+    if extra_env:
+        env.update(extra_env)
     proc = subprocess.Popen([str(VIEW), "--net", "127.0.0.1"] + args,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     try:
@@ -265,9 +268,12 @@ def main():
                          "no way to find it")
 
     # ---- the Settings button staying put over the game ------------------------
+    import tempfile
+    chrome_home = Path(tempfile.mkdtemp(prefix="sft-chrome-"))
     console = StreamingConsole(PORT, nvenc_frames())
     console.start()
-    _, err = run(["--test-chrome"], 7.0, console)
+    _, err = run(["--test-chrome"], 7.0, console,
+                 {"HOME": str(chrome_home), "XDG_STATE_HOME": str(chrome_home)})
     console.close()
     time.sleep(0.4)
     chrome = [l.strip() for l in err.splitlines() if "test-chrome" in l]
@@ -320,6 +326,24 @@ def main():
             fails.append("the log did not report the Settings button's opacity")
         elif not 0 <= int(mo.group(1)) <= 100:
             fails.append(f"the Settings button's opacity is {mo.group(1)}%, outside 0..100%")
+        # v1.0.1: the show/hide toggle removes the gear and brings it back
+        off_line = next((l for l in chrome if "toggle off" in l), "")
+        on_line = next((l for l in chrome if "toggle on" in l), "")
+        if "gear in layout no" not in off_line or "hit at its place no" not in off_line:
+            fails.append(f"switching the Settings button off did not remove the gear: {off_line or 'no line'}")
+        elif "gear in layout yes" not in on_line or "hit H_SETTINGS" not in on_line:
+            fails.append(f"switching the Settings button back on did not restore it: {on_line or 'no line'}")
+        elif any("(FAIL)" in l for l in chrome):
+            fails.append("the chrome test reported a FAIL marker")
+        else:
+            print("  the Settings button toggle removes and restores the gear")
+        ini = chrome_home / ".local/share/switch-remote-frame/viewer/viewer.ini"
+        saved = ini.read_text(errors="replace") if ini.exists() else ""
+        if "set_button=1" not in saved:
+            fails.append("viewer.ini does not remember the Settings button toggle")
+        else:
+            print("  the toggle is remembered in viewer.ini")
+        shutil.rmtree(chrome_home, ignore_errors=True)
 
     # ---- the layout editor's panel shape --------------------------------------
     console = StreamingConsole(PORT, nvenc_frames())

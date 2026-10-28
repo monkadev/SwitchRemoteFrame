@@ -248,7 +248,7 @@ namespace {
             tsl::elm::Element *createUI() override {
                 /* the release script keeps this literal in step with the
                  * manager, sysmodule and Makefiles (tools/make_release.sh) */
-                auto *frame = new tsl::elm::OverlayFrame("Switch Remote Frame", "v1.0.0");
+                auto *frame = new tsl::elm::OverlayFrame("Switch Remote Frame", "v1.0.1");
                 auto *list = new tsl::elm::List();
 
                 list->addItem(new tsl::elm::CategoryHeader("Stream to PC"));

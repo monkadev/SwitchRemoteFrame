@@ -82,15 +82,15 @@ modules:
   - name: switch-remote-frame
     buildsystem: simple
     build-commands:
-      - gcc -O2 -Wall -Wextra -DSFT_H264 -DSFT_MP4 -DSFT_VERSION='"1.0.0"' -I/app/include $(pkg-config --cflags sdl2 libusb-1.0) -o switch-remote-frame-viewer tools/raw-recv/raw-view.c /app/lib/libavformat.a /app/lib/libavcodec.a /app/lib/libavutil.a -lva -lva-drm $(pkg-config --libs sdl2 libusb-1.0) -ludev -lpthread -lm -ldl
+      - gcc -O2 -Wall -Wextra -DSFT_H264 -DSFT_MP4 -DSFT_VERSION='"1.0.1"' -I/app/include $(pkg-config --cflags sdl2 libusb-1.0) -o switch-remote-frame-viewer tools/raw-recv/raw-view.c /app/lib/libavformat.a /app/lib/libavcodec.a /app/lib/libavutil.a -lva -lva-drm $(pkg-config --libs sdl2 libusb-1.0) -ludev -lpthread -lm -ldl
       - install -D switch-remote-frame-viewer /app/bin/switch-remote-frame-viewer
       - install -D tools/raw-recv/switch-remote-frame.svg /app/share/icons/hicolor/scalable/apps/io.github.monkadev.SwitchRemoteFrame.svg
       - install -D io.github.monkadev.SwitchRemoteFrame.desktop /app/share/applications/io.github.monkadev.SwitchRemoteFrame.desktop
       - install -D io.github.monkadev.SwitchRemoteFrame.metainfo.xml /app/share/metainfo/io.github.monkadev.SwitchRemoteFrame.metainfo.xml
     sources:
       - type: archive
-        url: https://github.com/monkadev/switchremoteframe/archive/refs/tags/v1.0.0.tar.gz
-        sha256: 55e70b6e41e03d02f679db8d0b8a416b691a379164a2f490d25966591c7adb8d
+        url: https://github.com/monkadev/SwitchRemoteFrame/archive/refs/tags/v1.0.1.tar.gz
+        sha256: 0000000000000000000000000000000000000000000000000000000000000000
       - type: file
         path: io.github.monkadev.SwitchRemoteFrame.desktop
       - type: file

@@ -89,13 +89,15 @@ enum { H_NONE, H_SETTINGS, H_CLOSE, H_BACKDROP, H_CONN, H_IP, H_FULL, H_VSYNC, H
        H_VPAD, H_VPAD_LAYOUT, H_VPAD_HIDDEN, H_GP_PAGE,   /* v1.0.2: the on-screen gamepad */
        H_CONNECT,                                         /* v1.0.3: Connect / Disconnect */
        H_IP_OK, H_IP_CANCEL,                              /* v1.1.3: IP editing buttons */
-       H_SET_OP };                                        /* how see-through the Settings button is */
+       H_SET_OP,                                          /* how see-through the Settings button is */
+       H_SET_BTN,                                         /* v1.0.1: show/hide the in-stream Settings button */
+       H_ABOUT };                                         /* v1.0.1: the GitHub project link */
 
 typedef struct { SDL_FRect r; int id, arg, window_space; } ui_hit_t;
 static ui_hit_t g_ui_hits[96];
 static int g_ui_nhits;
 /* the drawer's rows in order, for the keys: (id, arg) */
-static struct { int id, arg; float y, h; } g_ui_rows[24];
+static struct { int id, arg; float y, h; } g_ui_rows[32];
 static int g_ui_nrows;
 
 static void ui_hit(float x, float y, float w, float h, int id, int arg)
@@ -419,11 +421,12 @@ static int ui_chrome_layout(int ow, float *xs, int *ids, float *out_d, float *ou
         ids[n] = H_WIN_MAX;   xs[n] = right - d; n++; right -= d + gap;
         ids[n] = H_WIN_MIN;   xs[n] = right - d; n++; right -= d + gap;
     }
-    /* v1.0.4: the gear is always here. It got a bar to tuck into for a version
-     * and the bar is gone again - a button that moves when you are not looking
-     * is harder to hit than one that is merely faint, and its opacity setting
-     * already covers getting it out of the way. */
-    ids[n] = H_SETTINGS; xs[n] = right - d; n++;
+    /* v1.0.1: the gear can be switched off entirely (Settings button toggle).
+     * With it gone the window controls keep their place; Esc and the home
+     * screen's Settings card still open the drawer. */
+    if (g_set_button) {
+        ids[n] = H_SETTINGS; xs[n] = right - d; n++;
+    }
     *out_d = d; *out_y = y;
     return n;
 }
@@ -586,7 +589,7 @@ static void prefs_save(void)
             g_touch_on, g_kb_on, g_pad_on, g_rumble_on);   /* v1.0.1 */
     /* v1.0.2: the on-screen gamepad and the controller's mapping. The layout is
      * the Android app's own string, so it can be copied between the two. */
-    fprintf(f, "auto=%d\nset_op=%d\n", g_conn_requested, g_set_op);   /* v1.0.3 */
+    fprintf(f, "auto=%d\nset_op=%d\nset_button=%d\n", g_conn_requested, g_set_op, g_set_button);   /* v1.0.3 */
     fprintf(f, "vpad_mode=%d\nvpad_opacity=%.2f\nvpad_hidden=%d\n", g_vpad_mode, g_vpad_opacity, g_vpad_hidden);
     fprintf(f, "pad_rumble=%d\npad_right=%d\n", g_pad_rumble_on, g_gp_right);
     {
@@ -928,6 +931,18 @@ static void ui_drawer(SDL_Renderer *ren, float x0, float y0, float pw, float ph)
             ui_hit(cxi - ui_d(8), ty - ui_d(14), cwi + ui_d(16), ui_d(28), H_SET_OP, 0);
             y += h + gap_y;
         }
+        /* v1.0.1: switch the in-stream Settings gear on or off altogether.
+         * Off leaves the opacity slider alone; Esc still opens the drawer. */
+        {
+            const float h = ui_d(48);
+            ui_row(H_SET_BTN, 0, y, h);
+            ui_label(ren, cxi, y, h, "Settings button",
+                     g_set_button ? "The gear over the game fades out 2 s after the mouse stops"
+                                  : "Hidden - Esc and the home card still open Settings",
+                     ui_focused(H_SET_BTN, 0), cwi);
+            ui_toggle(ren, xri, y + ui_d(12), g_set_button, H_SET_BTN, 1);
+            y += h + gap_y;
+        }
             const float hm = ui_d(34);
             ui_row(H_KB, 1, y, hm);
             ui_text_fit(ren, "WASD / IJKL sticks, arrows D-pad, Z X C V = A B X Y, B N = L R, , . = ZL ZR, / ; = - +, H = HOME",
@@ -974,6 +989,19 @@ static void ui_drawer(SDL_Renderer *ren, float x0, float y0, float pw, float ph)
             ui_row(H_UPD_AUTO, 0, y, h);
             ui_label(ren, cxi, y, h, "Check at start-up", "Looks for a new version when the viewer opens", ui_focused(H_UPD_AUTO, 0), cwi);
             ui_toggle(ren, xri, y + ui_d(12), g_upd_check, H_UPD_AUTO, us != UPD_UNSUPPORTED);
+            y += h + ui_d(4);
+        }
+
+        /* v1.0.1: the About block, at the bottom of Settings - version,
+         * license and the GitHub project, one click away. */
+        ui_section(ren, cxi, &y, "ABOUT");
+        {
+            const float h = ui_d(48);
+            ui_row(H_ABOUT, 0, y, h);
+            ui_label(ren, cxi, y, h, "Switch Remote Frame " SFT_VERSION,
+                     "GPL-2.0 - github.com/monkadev/SwitchRemoteFrame",
+                     ui_focused(H_ABOUT, 0), cwi);
+            ui_button(ren, xri, 0, y + ui_d(8), "Open", UI_SURF3, UI_INK, H_ABOUT, 0, 1);
             y += h + ui_d(4);
         }
 
@@ -1345,7 +1373,7 @@ static void menu_draw_layer(SDL_Renderer *ren, int present)
         ly += ui_d(24);
         text_draw(ren, "QUICK ACCESS", (int)left, (int)ly, ui_px(11), 1, UI_FAINT, 0);
         ly += ui_d(24);
-        const char *quick[2] = { "Settings", "Donate on Ko-fi" };
+        const char *quick[2] = { "Settings", "Support this project" };
         for (int i = 0; i < 2; ++i) {
             float qy = ly + i * ui_d(42);
             ui_card(ren, left, qy, left_w - ui_d(8), ui_d(34), ui_d(10), UI_SURF2);
@@ -1398,7 +1426,7 @@ static void menu_draw_layer(SDL_Renderer *ren, int present)
         ui_button(ren, -1, cx, y, req ? "Disconnect" : "Connect", req ? UI_SURF3 : UI_ACC, req ? UI_WARN : UI_ONACC, H_CONNECT, 0, 1); y += ui_d(42);
         const float half = (inner - ui_d(10)) * .5f;
         ui_button(ren, cx, cx - half * .5f, y, "Settings", UI_SURF3, UI_INK, H_SETTINGS, 0, 1);
-        ui_button(ren, -1, cx + half * .5f, y, "Donate on Ko-fi", UI_HEART, UI_ONACC, H_DONATE, 0, 1); y += ui_d(42);
+        ui_button(ren, -1, cx + half * .5f, y, "Support this project", UI_HEART, UI_ONACC, H_DONATE, 0, 1); y += ui_d(42);
     }
 
     /* v0.7.14: a newer viewer on GitHub (update.h) */
@@ -1572,6 +1600,8 @@ static void ui_change(SDL_Window *win, SDL_Renderer *ren, int id, int arg, int d
         prefs_save();
         break;
     }
+    case H_SET_BTN: g_set_button = !g_set_button; prefs_save(); break;   /* v1.0.1 */
+    case H_ABOUT: if (d == 0) SDL_OpenURL("https://github.com/monkadev/SwitchRemoteFrame"); break;
     case H_CONNECT:
         if (d == 0) {
             if (conn_requested_for_menu()) { act_disconnect_for_menu(); ui_open(0); }
@@ -1731,6 +1761,8 @@ static int ui_event(SDL_Window *win, SDL_Renderer *ren, const SDL_Event *e)
             /* v1.0.5: a slider - pressing anywhere on the row jumps the knob
              * there and the pointer can drag it from 100% down to 0% */
             case H_SET_OP: g_ui_drag = H_SET_OP; g_ui_drag_arg = 0; ui_slide(g_ui_mx); prefs_save(); break;
+            case H_SET_BTN: g_set_button = h->arg; prefs_save(); break;   /* v1.0.1 */
+            case H_ABOUT: SDL_OpenURL("https://github.com/monkadev/SwitchRemoteFrame"); break;
             case H_GP_PAGE: ui_open(0); gp_page_open(); break;
             case H_REC: act_record(win); break;
             case H_DONATE: SDL_OpenURL("https://ko-fi.com/monkadev"); break;   /* v1.0.5 */
